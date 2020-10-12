@@ -1,6 +1,6 @@
 /*!
  * @file flamespeed.cpp
- * C++ demo program to compute flame speeds using GRI-Mech.
+ * C++ demo program to compute flame speeds using drm-Mech.
  * Usage: flamespeed [equivalence_ratio] [refine_grid] [loglevel]
  */
 
@@ -17,16 +17,16 @@ using fmt::print;
 int flamespeed(double phi, bool refine_grid, int loglevel)
 {
     try {
-        auto sol = newSolution("gri30.yaml", "gri30", "None");
+        auto sol = newSolution("drm19.yaml", "drm19", "None");
         auto gas = sol->thermo();
         double temp = 300.0; // K
         double pressure = 1.0*OneAtm; //atm
-        double uin = 0.3; //m/sec
+        double uin = 0.45; //m/sec
 
         size_t nsp = gas->nSpecies();
         vector_fp x(nsp, 0.0);
 
-        gas->setEquivalenceRatio(phi, "CH4", "O2:0.21,N2:0.79");
+        gas->setEquivalenceRatio(phi, "CH4", "O2:0.21,N2:0.78, AR:0.01");
         gas->setState_TP(temp, pressure);
         gas->getMoleFractions(x.data());
 
@@ -36,6 +36,7 @@ int flamespeed(double phi, bool refine_grid, int loglevel)
         gas->getMassFractions(&yin[0]);
 
         gas->equilibrate("HP");
+        std::cout << gas->report() << std::endl;
         vector_fp yout(nsp);
         gas->getMassFractions(&yout[0]);
         double rho_out = gas->density();

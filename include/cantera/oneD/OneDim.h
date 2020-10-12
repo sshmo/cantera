@@ -50,6 +50,8 @@ public:
      */
     int solve(doublereal* x0, doublereal* x1, int loglevel);
 
+    //! Added by shabbir mousavi
+    int dosolid;
     /// Number of domains.
     size_t nDomains() const {
         return m_dom.size();

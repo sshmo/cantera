@@ -1,3 +1,6 @@
+samples/
+interfaces/cython/cantera/examples/
+samples/cxx/
 doc/ctdeploy_key
 *~
 *#

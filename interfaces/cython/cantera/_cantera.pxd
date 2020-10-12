@@ -765,6 +765,7 @@ cdef extern from "cantera/oneD/StFlow.h":
         void setKinetics(CxxKinetics&) except +translate_exception
         void setTransport(CxxTransport&, cbool) except +translate_exception
         void setTransport(CxxTransport&) except +translate_exception
+        # void setupGrid(size_t, double*) except +translate_exception
         void setPressure(double)
         void enableRadiation(cbool)
         cbool radiationEnabled()
@@ -783,6 +784,40 @@ cdef extern from "cantera/oneD/StFlow.h":
         void setAxisymmetricFlow()
         string flowType()
 
+cdef extern from "cantera/oneD/PorousFlow.h":
+    cdef cppclass CxxPorousFlow "Cantera::PorousFlow":
+        CxxPorousFlow(CxxIdealGasPhase*, int, int)
+        void setupGrid(size_t, double*)
+        void eval(size_t, double*, double*, int*, double) except +translate_exception
+        void solid(double*, vector[double]&, vector[double]&,
+               vector[double]&, vector[double]&, double&, double&, double) except +translate_exception
+        void restore(XML_Node&, double*,int) except +translate_exception
+        double pore1
+        double pore2
+        double m_porea
+        double m_poreb
+        double m_porec
+        double m_pored
+        double diam1
+        double diam2
+        double scond1
+        double scond2
+        double m_diama
+        double m_diamb
+        double m_diamc
+        double m_diamd
+        double Omega1
+        double Omega2
+        double srho
+        double sCp
+        double m_zmid
+        double m_dzmid
+        double getTw(int &)
+        double getDq(int &)
+        double getPore(int &)
+        double getDiam(int &)
+        double getScond(int &)
+        double getHconv(int &) 
 
 cdef extern from "cantera/oneD/IonFlow.h":
     cdef cppclass CxxIonFlow "Cantera::IonFlow":
@@ -1156,7 +1191,20 @@ cdef class IonFlow(_FlowBase):
 cdef class AxisymmetricStagnationFlow(IdealGasFlow):
     pass
 
+cdef class PorousFlow(_FlowBase):
+    pass
+
 cdef class Sim1D:
+    cdef CxxSim1D* sim
+    cdef readonly object domains
+    cdef object _initialized
+    cdef object _initial_guess_args
+    cdef object _initial_guess_kwargs
+    cdef public Func1 _interrupt
+    cdef public Func1 _time_step_callback
+    cdef public Func1 _steady_callback
+
+cdef class PorousSim1D(PorousFlow):
     cdef CxxSim1D* sim
     cdef readonly object domains
     cdef object _initialized
