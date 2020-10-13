@@ -1,7 +1,7 @@
 """
 A simple model of a solid oxide fuel cell.
 
-Unlike most SOFC models, this model does not use semi-empirical Butler- Volmer
+Unlike most SOFC models, this model does not use semi-empirical Butler-Volmer
 kinetics for the charge transfer reactions, but uses elementary, reversible
 reactions obeying mass-action kinetics for all reactions, including charge
 transfer. As this script will demonstrate, this approach allows computing the
@@ -120,14 +120,16 @@ def anode_curr(E):
     # get the species net production rates due to the anode-side TPB reaction
     # mechanism. The production rate array has the values for the neighbor
     # species in the order listed in the .yaml file, followed by the tpb phase.
-    # Since the first neighbor phase is the bulk metal, species 0 is the
-    # electron.
+    # The kinetics_species_index method finds the index of the species,
+    # accounting for the possibility of species being in different orders in the
+    # arrays.
     w = tpb_a.net_production_rates
+    electron_index = tpb_a.kinetics_species_index('electron')
 
     # the sign convention is that the current is positive when
-    # electrons are being delivered to the anode - i.e. it is positive
+    # electrons are being delivered to the anode - that is, it is positive
     # for fuel cell operation.
-    return ct.faraday * w[0] * TPB_length_per_area
+    return ct.faraday * w[electron_index] * TPB_length_per_area
 
 
 #####################################################################
@@ -167,13 +169,15 @@ def cathode_curr(E):
     # get the species net production rates due to the cathode-side TPB
     # reaction mechanism. The production rate array has the values for the
     # neighbor species in the order listed in the .yaml file, followed by the
-    # tpb phase. Since the first neighbor phase is the bulk metal, species 0
-    # is the electron.
+    # tpb phase. The kinetics_species_index method finds the index of the species,
+    # accounting for the possibility of species being in different orders in the
+    # arrays.
     w = tpb_c.net_production_rates
+    electron_index = tpb_c.kinetics_species_index('electron')
 
     # the sign convention is that the current is positive when electrons are
-    # being drawn from the cathode (i.e, negative production rate).
-    return -ct.faraday * w[0] * TPB_length_per_area
+    # being drawn from the cathode (that is, negative production rate).
+    return -ct.faraday * w[electron_index] * TPB_length_per_area
 
 
 # initialization

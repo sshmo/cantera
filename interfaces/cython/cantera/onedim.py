@@ -2,8 +2,8 @@
 # at https://cantera.org/license.txt for license and copyright information.
 
 from math import erf
-from os import path
 from email.utils import formatdate
+import warnings
 import numpy as np
 
 from ._cantera import *
@@ -51,7 +51,7 @@ class FlameBase(Sim1D):
         if isinstance(dom, Inlet1D):
             return tuple([e for e in self._other
                           if e not in {'grid', 'lambda', 'eField'}])
-        elif isinstance(dom, IdealGasFlow):
+        elif isinstance(dom, (IdealGasFlow, IonFlow)):
             return self._other
         else:
             return ()
@@ -253,7 +253,27 @@ class FlameBase(Sim1D):
         self.flame.radiation_enabled = enable
 
     def set_boundary_emissivities(self, e_left, e_right):
-        self.flame.set_boundary_emissivities(e_left, e_right)
+        """
+        .. deprecated:: 2.5
+
+             To be deprecated with version 2.5, and removed thereafter.
+             Replaced by property `boundary_emissivities`.
+        """
+        warnings.warn("Method 'set_boundary_emissivities' to be removed after "
+                      "Cantera 2.5. Replaced by property "
+                      "'boundary_emissivities'", DeprecationWarning)
+        self.flame.boundary_emissivities = e_left, e_right
+
+    @property
+    def boundary_emissivities(self):
+        """ Set/get boundary emissivities. """
+        return self.flame.boundary_emissivities
+
+    @boundary_emissivities.setter
+    def boundary_emissivities(self, epsilon):
+        if len(epsilon) != 2:
+            raise ValueError("Boundary emissivities must both be set at the same time.")
+        self.flame.boundary_emissivities = epsilon[0], epsilon[1]
 
     @property
     def grid(self):

@@ -529,6 +529,7 @@ class SolutionArray:
         reserved = self.__dir__()
 
         self._extra = OrderedDict()
+
         if isinstance(extra, dict):
             for name, v in extra.items():
                 if name in reserved:
@@ -536,25 +537,42 @@ class SolutionArray:
                         "Unable to create extra column '{}': name is already "
                         "used by SolutionArray objects.".format(name))
                 if not np.shape(v):
-                    self._extra[name] = [v]*self._shape[0]
-                elif len(v) == self._shape[0]:
-                    self._extra[name] = list(v)
+                    self._extra[name] = np.full(self._shape, v)
+                elif np.array(v).shape == self._shape:
+                    self._extra[name] = np.array(v)
                 else:
-                    raise ValueError("Unable to map extra SolutionArray"
-                                     "input for named {!r}".format(name))
+                    raise ValueError("Unable to map extra SolutionArray "
+                                     "input named {!r}".format(name))
+        elif extra is not None:
+            if self._shape != (0,):
+                raise ValueError("Initial values for extra properties must be "
+                                 "supplied in a dictionary if the SolutionArray "
+                                 "is not initially empty.")
+            if isinstance(extra, np.ndarray):
+                extra = extra.flatten()
+            elif isinstance(extra, str):
+                extra = [extra]
 
-        elif extra and self._shape == (0,):
-            for name in extra:
+            try:
+                iter_extra = iter(extra)
+            except TypeError:
+                raise ValueError(
+                    "Extra properties can be created by passing an iterable "
+                    "of names for the properties. If you want to supply initial "
+                    "values for the properties, use a dictionary whose keys are "
+                    "the names of the properties and values are the initial "
+                    "values.") from None
+
+            for name in iter_extra:
+                if not isinstance(name, str):
+                    raise TypeError(
+                        "Unable to create extra column, passed value '{!r}' "
+                        "is not a string".format(name))
                 if name in reserved:
                     raise ValueError(
                         "Unable to create extra column '{}': name is already "
                         "used by SolutionArray objects.".format(name))
-                self._extra[name] = []
-
-        elif extra:
-            raise ValueError("Initial values for extra properties must be "
-                             "supplied in a dict if the SolutionArray is not "
-                             "initially empty")
+                self._extra[name] = np.empty(shape=(0,))
 
         if meta is None:
             self._meta = {}
@@ -574,7 +592,7 @@ class SolutionArray:
 
     def __getattr__(self, name):
         if name in self._extra:
-            return np.array(self._extra[name])
+            return self._extra[name]
         else:
             raise AttributeError("'{}' object has no attribute '{}'".format(
                 self.__class__.__name__, name))
@@ -608,8 +626,24 @@ class SolutionArray:
         if len(self._shape) != 1:
             raise IndexError("Can only append to 1D SolutionArray")
 
-        for name, value in self._extra.items():
-            value.append(kwargs.pop(name))
+        # This check must go before we start appending to any arrays so that
+        # array lengths don't get out of sync.
+        missing_extra_kwargs = self._extra.keys() - kwargs.keys()
+        if missing_extra_kwargs:
+            raise TypeError(
+                "Missing keyword arguments for extra values: "
+                "'{}'".format(", ".join(missing_extra_kwargs))
+            )
+
+        # For the checks of the state below, the kwargs dictionary can
+        # only contain keywords that match properties of the state. Here
+        # we pop any kwargs that have to do with the extra items so they
+        # aren't included in that check. They are put into a temporary
+        # storage so that appending can be done at the end of the function
+        # all at once.
+        extra_temp = {}
+        for name in self._extra:
+            extra_temp[name] = kwargs.pop(name)
 
         if state is not None:
             self._phase.state = state
@@ -617,19 +651,29 @@ class SolutionArray:
         elif len(kwargs) == 1:
             attr, value = next(iter(kwargs.items()))
             if frozenset(attr) not in self._phase._full_states:
-                raise KeyError("{} does not specify a full thermodynamic state")
+                raise KeyError(
+                    "'{}' does not specify a full thermodynamic state".format(attr)
+                )
             setattr(self._phase, attr, value)
 
         else:
             try:
                 attr = self._phase._full_states[frozenset(kwargs)]
             except KeyError:
-                raise KeyError("{} is not a valid combination of properties "
-                    "for setting the thermodynamic state".format(tuple(kwargs)))
+                raise KeyError(
+                    "{} is not a valid combination of properties for setting "
+                    "the thermodynamic state".format(tuple(kwargs))
+                ) from None
             setattr(self._phase, attr, [kwargs[a] for a in attr])
 
         self._states.append(self._phase.state)
         self._indices.append(len(self._indices))
+        for name, value in self._extra.items():
+            # Casting to a list before appending is ~5x faster than using
+            # np.append when appending a single item.
+            v = value.tolist()
+            v.append(extra_temp.pop(name))
+            self._extra[name] = np.array(v)
         self._shape = (len(self._indices),)
 
     @property
@@ -655,7 +699,7 @@ class SolutionArray:
             indices = indices[::-1]
         self._states = [self._states[ix] for ix in indices]
         for k, v in self._extra.items():
-            self._extra[k] = list(np.array(v)[indices])
+            self._extra[k] = v[indices]
 
     def equilibrate(self, *args, **kwargs):
         """ See `ThermoPhase.equilibrate` """
@@ -865,7 +909,6 @@ class SolutionArray:
         if tabular and len(self._shape) != 1:
             raise AttributeError("Tabular output of collect_data only works "
                                  "for 1D SolutionArray")
-        out = OrderedDict()
 
         # Create default columns (including complete state information)
         if cols is None:
@@ -889,7 +932,6 @@ class SolutionArray:
 
         def split(c, d):
             """ Split attribute arrays into columns for tabular output """
-            single_species = False
             # Determine labels for the items in the current group of columns
             if c in self._n_species:
                 collabels = ['{}_{}'.format(c, s) for s in self.species_names]

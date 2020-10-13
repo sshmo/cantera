@@ -720,7 +720,7 @@ for arg in ARGUMENTS:
         sys.exit(1)
 
 # Require a StrictVersion-compatible version
-env['cantera_version'] = "2.5.0a4"
+env['cantera_version'] = "2.5.0b1"
 ctversion = StrictVersion(env['cantera_version'])
 # For use where pre-release tags are not permitted (MSI, sonames)
 env['cantera_pure_version'] = '.'.join(str(x) for x in ctversion.version)
@@ -1347,11 +1347,6 @@ if env['python_package'] != 'none':
                         ruamel_yaml_version, ruamel_min_version))
                 sys.exit(1)
 
-        if len(info) > expected_output_lines:
-            print("WARNING: Unexpected output while checking Python "
-                  "dependency versions:")
-            print('| ' + '\n| '.join(info[expected_output_lines:]))
-
     if warn_no_python:
         if env['python_package'] == 'default':
             print('WARNING: Not building the Python package because the Python '
@@ -1370,7 +1365,17 @@ if env['python_package'] != 'none':
         elif env["python_package"] == "default":
             print(msg.format("WARNING", python_version, python_min_version))
             env["python_package"] = "none"
+    elif env['python_package'] == 'minimal':
+        # If the minimal package was specified, no further checking
+        # needs to be done
+        print('INFO: Building the minimal Python package for Python {}'.format(python_version))
     else:
+
+        if len(info) > expected_output_lines:
+            print("WARNING: Unexpected output while checking Python "
+                  "dependency versions:")
+            print('| ' + '\n| '.join(info[expected_output_lines:]))
+
         warn_no_full_package = False
         if python_version >= LooseVersion("3.8"):
             # Reset the minimum Cython version if the Python version is 3.8 or higher
@@ -1461,6 +1466,7 @@ env['debian'] = any(name.endswith('dist-packages') for name in sys.path)
 
 # Directories where things will be after actually being installed. These
 # variables are the ones that are used to populate header files, scripts, etc.
+env['prefix'] = os.path.normpath(env['prefix'])
 env['ct_installroot'] = env['prefix']
 env['ct_libdir'] = pjoin(env['prefix'], env['libdirname'])
 env['ct_bindir'] = pjoin(env['prefix'], 'bin')
@@ -1832,15 +1838,18 @@ def postInstallMessage(target, source, env):
         """.format(**env_dict))
 
     if os.name != 'nt':
+        env['setup_cantera'] = pjoin(env['ct_bindir'], 'setup_cantera')
+        env['setup_cantera_csh'] = pjoin(env['ct_bindir'], 'setup_cantera.csh')
         install_message += textwrap.dedent("""
+
             Setup scripts to configure the environment for Cantera are at:
 
-              setup script (bash)         {ct_bindir!s}/setup_cantera
-              setup script (csh/tcsh)     {ct_bindir!s}/setup_cantera.csh
+              setup script (bash)         {setup_cantera!s}
+              setup script (csh/tcsh)     {setup_cantera_csh!s}
 
             It is recommended that you run the script for your shell by typing:
 
-              source {ct_bindir!s}/setup_cantera
+              source {setup_cantera!s}
 
             before using Cantera, or else include its contents in your shell login script.
         """.format(**env_dict))

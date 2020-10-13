@@ -164,6 +164,9 @@ class InputError(Exception):
     the exceptional behavior.
     """
     def __init__(self, message, *args, **kwargs):
+        message += ("\nPlease check https://cantera.org/tutorials/"
+                   "ck2yaml-tutorial.html#debugging-common-errors-in-ck-files"
+                   "\nfor the correct Chemkin syntax.")
         if args or kwargs:
             super().__init__(message.format(*args, **kwargs))
         else:
@@ -688,8 +691,7 @@ class TransportData:
                 "Bad geometry flag '{}' for species '{}', is the flag a float "
                 "or character? It should be an integer.", geometry, label)
         if geometry not in (0, 1, 2):
-            raise InputError("Bad geometry flag '{}' for species '{}'",
-                             geometry, label)
+            raise InputError("Bad geometry flag '{}' for species '{}'.", geometry, label)
 
         self.geometry = self.geometry_flags[int(geometry)]
         self.well_depth = float(well_depth)
@@ -885,7 +887,18 @@ class Parser:
 
         if not composition:
             raise InputError("Error parsing elemental composition for "
-                             "species '{}'", species)
+                             "species '{}'.", species)
+
+        for symbol in composition.keys():
+            # Some CHEMKIN input files may have quantities of elements with
+            # more than 3 digits. This violates the column-based input format
+            # standard, so the entry cannot be read and we need to raise a
+            # more useful error message.
+            if any(map(str.isdigit, symbol)) and symbol not in self.elements:
+                raise InputError("Error parsing elemental composition for "
+                                 "species thermo entry:\n{}\nElement amounts "
+                                 "can have no more than 3 digits.",
+                                 "".join(lines))
 
         # Extract the NASA polynomial coefficients
         # Remember that the high-T polynomial comes first!
@@ -954,7 +967,7 @@ class Parser:
                           fortFloat(C[64:80])]
                 polys.append((Trange, coeffs))
         except (IndexError, ValueError) as err:
-            raise InputError('Error while reading thermo entry for species {}:\n{}',
+            raise InputError('Error while reading thermo entry for species {}:\n{}.',
                              species, err)
 
         thermo = Nasa9(data=polys, note=note)
@@ -1304,7 +1317,7 @@ class Parser:
                  surface]
         if sum(bool(t) for t in tests) > 1:
             raise InputError('Reaction {} contains parameters for more than '
-                'one reaction type.', original_reaction)
+                             'one reaction type.', original_reaction)
 
         if cheb_coeffs:
             if Tmin is None or Tmax is None:
@@ -1343,7 +1356,7 @@ class Parser:
         elif reaction.third_body:
             raise InputError('Reaction equation implies pressure '
                 'dependence but no alternate rate parameters (i.e. HIGH or '
-                'LOW) were given for reaction {}', reaction)
+                'LOW) were given for reaction {}.', reaction)
         elif surface:
             reaction.kinetics = SurfaceRate(rate=arrhenius,
                                             coverages=coverages,
@@ -1885,7 +1898,7 @@ class Parser:
             metadata = BlockMap([
                 ('generator', 'ck2yaml'),
                 ('input-files', FlowList(files)),
-                ('cantera-version', '2.5.0a4'),
+                ('cantera-version', '2.5.0b1'),
                 ('date', formatdate(localtime=True)),
             ])
             if desc.strip():

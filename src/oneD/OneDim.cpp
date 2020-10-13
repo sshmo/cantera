@@ -1,8 +1,4 @@
 //! @file OneDim.cpp
-
-// This file is part of Cantera. See License.txt in the top-level directory or
-// at https://cantera.org/license.txt for license and copyright information.
-
 #include "cantera/oneD/OneDim.h"
 #include "cantera/numerics/Func1.h"
 #include "cantera/base/ctml.h"
@@ -16,8 +12,8 @@ using namespace std;
 namespace Cantera
 {
 
-OneDim::OneDim()
-    : m_tmin(1.0e-16), m_tmax(1e8), m_tfactor(0.5),
+OneDim::OneDim():
+      dosolid(0),m_tmin(1.0e-16), m_tmax(1e8), m_tfactor(0.5),
       m_rdt(0.0), m_jac_ok(false),
       m_bw(0), m_size(0),
       m_init(false), m_pts(0), m_solve_time(0.0),
@@ -30,14 +26,11 @@ OneDim::OneDim()
 }
 
 OneDim::OneDim(vector<Domain1D*> domains) :
-    m_tmin(1.0e-16), m_tmax(1e8), m_tfactor(0.5),
+    dosolid(0),m_tmin(1.0e-16), m_tmax(1e8), m_tfactor(0.5),
     m_rdt(0.0), m_jac_ok(false),
-    m_bw(0), m_size(0),
-    m_init(false), m_solve_time(0.0),
-    m_ss_jac_age(20), m_ts_jac_age(20),
-    m_interrupt(0), m_time_step_callback(0),
-    m_nsteps(0), m_nsteps_max(500),
-    m_nevals(0), m_evaltime(0.0)
+    m_bw(0), m_size(0),m_init(false), m_solve_time(0.0),
+    m_ss_jac_age(20), m_ts_jac_age(20),m_interrupt(0), m_time_step_callback(0),
+    m_nsteps(0), m_nsteps_max(500),m_nevals(0), m_evaltime(0.0)
 {
     // create a Newton iterator, and add each domain.
     m_newt.reset(new MultiNewton(1));
@@ -224,6 +217,7 @@ void OneDim::resize()
 int OneDim::solve(doublereal* x, doublereal* xnew, int loglevel)
 {
     if (!m_jac_ok) {
+        dosolid = 1; //solid phase must be solved before next gas phase iteration
         eval(npos, x, xnew, 0.0, 0);
         m_jac->eval(x, xnew, 0.0);
         m_jac->updateTransient(m_rdt, m_mask.data());
@@ -358,6 +352,7 @@ doublereal OneDim::timeStep(int nsteps, doublereal dt, doublereal* x,
     int successiveFailures = 0;
 
     while (n < nsteps) {
+        dosolid=1; //solid phase must be solved before next gas phase iteration
         if (loglevel > 0) {
             doublereal ss = ssnorm(x, r);
             writelog(" {:>4d}  {:10.4g}  {:10.4g}", n, dt, log10(ss));
@@ -384,6 +379,7 @@ doublereal OneDim::timeStep(int nsteps, doublereal dt, doublereal* x,
                 m_time_step_callback->eval(dt);
             }
             dt = std::min(dt, m_tmax);
+            //std::cout<<"m_nsteps="<<m_nsteps<<endl;
             if (m_nsteps >= m_nsteps_max) {
                 throw CanteraError("OneDim::timeStep",
                     "Took maximum number of timesteps allowed ({}) without "

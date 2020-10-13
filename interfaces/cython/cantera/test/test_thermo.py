@@ -423,31 +423,15 @@ class TestThermoPhase(utilities.CanteraTest):
 
     def test_phase(self):
         self.assertEqual(self.phase.name, 'ohmech')
-
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with self.assertWarnsRegex(DeprecationWarning, "after Cantera 2.5"):
             self.assertEqual(self.phase.ID, 'ohmech')
-            self.assertEqual(len(w), 1)
-            self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
-            self.assertIn("To be removed after Cantera 2.5. ",
-                          str(w[-1].message))
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with self.assertWarnsRegex(DeprecationWarning, "after Cantera 2.5"):
             self.phase.ID = 'something'
-            self.assertEqual(self.phase.name, 'something')
-            self.assertEqual(len(w), 1)
-            self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
-            self.assertIn("To be removed after Cantera 2.5. ",
-                          str(w[-1].message))
+        self.assertEqual(self.phase.name, 'something')
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with self.assertWarnsRegex(FutureWarning, "Keyword 'name' replaces 'phaseid'"):
             gas = ct.Solution('h2o2.cti', phaseid='ohmech')
-            self.assertEqual(len(w), 1)
-            self.assertTrue(issubclass(w[-1].category, FutureWarning))
-            self.assertIn("Keyword 'name' replaces 'phaseid'",
-                          str(w[-1].message))
 
     def test_badLength(self):
         X = np.zeros(5)
@@ -1243,7 +1227,7 @@ class TestSpecies(utilities.CanteraTest):
 
     def test_alias(self):
         self.gas.add_species_alias('H2', 'hydrogen')
-        self.assertTrue(self.gas.species_index('hydrogen') == 0)
+        self.assertEqual(self.gas.species_index('hydrogen'), 0)
         self.gas.X = 'hydrogen:.5, O2:.5'
         self.assertNear(self.gas.X[0], 0.5)
         with self.assertRaisesRegex(ct.CanteraError, 'Invalid alias'):
@@ -1254,13 +1238,13 @@ class TestSpecies(utilities.CanteraTest):
     def test_isomers(self):
         gas = ct.Solution('nDodecane_Reitz.yaml')
         iso = gas.find_isomers({'C':4, 'H':9, 'O':2})
-        self.assertTrue(len(iso) == 2)
+        self.assertEqual(len(iso), 2)
         iso = gas.find_isomers('C:4, H:9, O:2')
-        self.assertTrue(len(iso) == 2)
+        self.assertEqual(len(iso), 2)
         iso = gas.find_isomers({'C':7, 'H':15})
-        self.assertTrue(len(iso) == 1)
+        self.assertEqual(len(iso), 1)
         iso = gas.find_isomers({'C':7, 'H':16})
-        self.assertTrue(len(iso) == 0)
+        self.assertEqual(len(iso), 0)
 
 
 class TestSpeciesThermo(utilities.CanteraTest):
@@ -1306,7 +1290,7 @@ class TestSpeciesThermo(utilities.CanteraTest):
         self.assertEqual(st.max_temp, 3500)
         self.assertEqual(st.reference_pressure, 101325)
         self.assertArrayNear(self.h2o_coeffs, st.coeffs)
-        self.assertTrue(st.n_coeffs == len(st.coeffs))
+        self.assertEqual(st.n_coeffs, len(st.coeffs))
         self.assertTrue(st._check_n_coeffs(st.n_coeffs))
 
     def test_nasa9_load(self):
@@ -1502,7 +1486,7 @@ class TestMisc(utilities.CanteraTest):
     def test_case_sensitive_names(self):
         gas = ct.Solution('h2o2.xml')
         self.assertFalse(gas.case_sensitive_species_names)
-        self.assertTrue(gas.species_index('h2') == 0)
+        self.assertEqual(gas.species_index('h2'), 0)
         gas.X = 'h2:.5, o2:.5'
         self.assertNear(gas.X[0], 0.5)
         gas.Y = 'h2:.5, o2:.5'
@@ -1741,15 +1725,83 @@ class TestSolutionArray(utilities.CanteraTest):
         self.assertArrayNear(col3.T, 900*np.ones(2))
         self.assertArrayNear(row2.T, 900*np.ones(5))
 
-    def test_extra(self):
+    def test_extra_create_by_dict(self):
         extra = OrderedDict([('grid', np.arange(10)),
                              ('velocity', np.random.rand(10))])
         states = ct.SolutionArray(self.gas, 10, extra=extra)
         keys = list(states._extra.keys())
         self.assertEqual(keys[0], 'grid')
+        self.assertArrayNear(states.grid, np.arange(10))
 
-        with self.assertRaises(ValueError):
-            states = ct.SolutionArray(self.gas, extra=['creation_rates'])
+    def test_extra_no_shape(self):
+        # The shape of the value for "prop" here is (), which is falsey
+        # and causes the use of np.full()
+        states = ct.SolutionArray(self.gas, 3, extra={"prop": 1})
+        self.assertEqual(states.prop.shape, (3,))
+        self.assertArrayNear(states.prop, np.array((1, 1, 1)))
+
+        # Check a multidimensional SolutionArray
+        states = ct.SolutionArray(self.gas, (2, 2), extra={"prop": 3})
+        self.assertEqual(states.prop.shape, (2, 2))
+        self.assertArrayNear(states.prop, np.array(((3, 3), (3, 3))))
+
+    def test_extra_not_empty(self):
+        """Test that a non-empty SolutionArray raises a ValueError if
+           initial values for properties are not supplied.
+        """
+        with self.assertRaisesRegex(ValueError, "Initial values for extra properties"):
+            ct.SolutionArray(self.gas, 3, extra=["prop"])
+        with self.assertRaisesRegex(ValueError, "Initial values for extra properties"):
+            ct.SolutionArray(self.gas, 3, extra=np.array(["prop", "prop2"]))
+
+    def test_extra_wrong_shape(self):
+        with self.assertRaisesRegex(ValueError, "Unable to map"):
+            ct.SolutionArray(self.gas, (3, 3), extra={"prop": np.arange(3)})
+
+    def test_extra_create_by_iterable(self):
+        states = ct.SolutionArray(self.gas, extra=("prop1"))
+        self.assertEqual(states.prop1.shape, (0,))
+
+        # An integer is not an iterable, and only bare strings are
+        # turned into iterables
+        with self.assertRaisesRegex(ValueError, "Extra properties"):
+            ct.SolutionArray(self.gas, extra=2)
+
+    def test_extra_not_string(self):
+        with self.assertRaisesRegex(TypeError, "is not a string"):
+            ct.SolutionArray(self.gas, extra=[1])
+
+    def test_extra_reserved_names(self):
+        with self.assertRaisesRegex(ValueError, "name is already used"):
+            ct.SolutionArray(self.gas, extra=["creation_rates"])
+
+        with self.assertRaisesRegex(ValueError, "name is already used"):
+            ct.SolutionArray(self.gas, extra={"creation_rates": 0})
+
+    def test_extra_create_by_string(self):
+        states = ct.SolutionArray(self.gas, extra="prop")
+        self.assertEqual(states.prop.shape, (0,))
+
+    def test_assign_to_slice(self):
+        states = ct.SolutionArray(self.gas, 7, extra={'prop': range(7)})
+        array = np.arange(7)
+        self.assertArrayNear(states.prop, array)
+        states.prop[1] = -5
+        states.prop[3:5] = [0, 1]
+        array_mod = np.array([0, -5, 2, 0, 1, 5, 6])
+        self.assertArrayNear(states.prop, array_mod)
+
+    def test_extra_create_by_ndarray(self):
+        properties_array = np.array(["prop1", "prop2", "prop3"])
+        states = ct.SolutionArray(self.gas, shape=(0,), extra=properties_array)
+        self.assertEqual(states.prop1.shape, (0,))
+        self.assertEqual(states.prop2.shape, (0,))
+        self.assertEqual(states.prop3.shape, (0,))
+        # Ensure that a 2-dimensional array is flattened
+        properties_array = np.array((["prop1"], ["prop2"]))
+        states = ct.SolutionArray(self.gas, extra=properties_array)
+        self.assertEqual(states.prop1.shape, (0,))
+        self.assertEqual(states.prop2.shape, (0,))
 
     def test_append(self):
         states = ct.SolutionArray(self.gas, 5)
@@ -1769,11 +1821,45 @@ class TestSolutionArray(utilities.CanteraTest):
 
         self.gas.TPX = 300, 1e4, 'O2:0.5, AR:0.5'
         HPY = self.gas.HPY
-        self.gas.TPX = 1200, 5e5, 'O2:0.3, AR:0.7' # to make sure it gets changed
+        self.gas.TPX = 1200, 5e5, 'O2:0.3, AR:0.7'  # to make sure it gets changed
         states.append(HPY=HPY)
         self.assertEqual(states.cp_mass.shape, (8,))
         self.assertNear(states.P[-1], 1e4)
         self.assertNear(states.T[-1], 300)
+
+    def test_append_with_extra(self):
+        states = ct.SolutionArray(self.gas, 5, extra={"prop": "value"})
+        states.TPX = np.linspace(500, 1000, 5), 2e5, 'H2:0.5, O2:0.4'
+        self.assertEqual(states._shape, (5,))
+        states.append(T=1100, P=3e5, X="AR:1.0", prop="value2")
+        self.assertEqual(states.prop[-1], "value2")
+        self.assertEqual(states.prop.shape, (6,))
+        states.append(T=1100, P=3e5, X="AR:1.0", prop=100)
+        # NumPy converts to the existing type of the array
+        self.assertEqual(states.prop[-1], "100")
+        self.assertEqual(states.prop.shape, (7,))
+
+    def test_append_failures(self):
+        states = ct.SolutionArray(self.gas, 5, extra={"prop": "value"})
+        states.TPX = np.linspace(500, 1000, 5), 2e5, 'H2:0.5, O2:0.4'
+        self.assertEqual(states._shape, (5,))
+
+        with self.assertRaisesRegex(TypeError, "Missing keyword arguments for extra"):
+            states.append(T=1100, P=3e5, X="AR:1.0")
+        # Failing to append a state shouldn't change the size
+        self.assertEqual(states._shape, (5,))
+
+        with self.assertRaisesRegex(KeyError, "does not specify"):
+            # I is not a valid property
+            states.append(TPI=(1100, 3e5, "AR:1.0"), prop="value2")
+        # Failing to append a state shouldn't change the size
+        self.assertEqual(states._shape, (5,))
+
+        with self.assertRaisesRegex(KeyError, "is not a valid"):
+            # I is not a valid property
+            states.append(T=1100, P=3e5, I="AR:1.0", prop="value2")
+        # Failing to append a state shouldn't change the size
+        self.assertEqual(states._shape, (5,))
 
     def test_purefluid(self):
         water = ct.Water()
@@ -1850,7 +1936,7 @@ class TestSolutionArray(utilities.CanteraTest):
         states.sort('T')
         self.assertFalse((states.t[1:] - states.t[:-1] > 0).all())
         self.assertTrue((states.T[1:] - states.T[:-1] > 0).all())
-        self.assertTrue(np.allclose(states.P, P))
+        self.assertArrayNear(states.P, P)
 
         states.sort('T', reverse=True)
         self.assertTrue((states.T[1:] - states.T[:-1] < 0).all())

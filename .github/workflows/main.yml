@@ -63,7 +63,7 @@ jobs:
     - name: Install Brew dependencies
       run: brew install boost libomp
     - name: Upgrade pip
-      run: python3 -m pip install -U pip setuptools wheel
+      run: python3 -m pip install -U pip 'setuptools>=47.0.0,<48' wheel
     - name: Install Python dependencies
       run: python3 -m pip install ruamel.yaml scons numpy cython h5py pandas
     - name: Build Cantera
@@ -151,10 +151,10 @@ jobs:
           --exclude='/doxygen/xml' --delete --delete-excluded \
           "${DOCS_OUTPUT_DIR}" ${RSYNC_USER}@${RSYNC_SERVER}:${RSYNC_DEST}
 
-  ubuntu-1604-py2:
-    # Ubuntu 16.04 using Python 2 to run SCons and the system Python 3 for the interface
-    name: Python 2 running SCons on Ubuntu 16.04
-    runs-on: ubuntu-16.04
+  ubuntu-1804-py2:
+    # Ubuntu 18.04 using Python 2 to run SCons and the system Python 3 for the interface
+    name: Python 2 running SCons on Ubuntu 18.04
+    runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
         name: Checkout the repository
@@ -163,16 +163,51 @@ jobs:
       - name: Install Apt dependencies
         run: |
           sudo apt-get install libboost-dev gfortran scons python3-numpy \
-          python3-pip python3-setuptools libsundials-serial-dev liblapack-dev \
+          python3-pip python3-setuptools python3-h5py python3-pandas \
+          python3-ruamel.yaml python-numpy cython3 libsundials-dev liblapack-dev \
           libblas-dev
-      - name: Install Python dependencies
-        # Don't include Pandas here due to install errors
-        run: |
-          sudo -H /usr/bin/python3 -m pip install ruamel.yaml cython h5py
       - name: Build Cantera
         run: scons build python_cmd=/usr/bin/python3 blas_lapack_libs=lapack,blas -j2
       - name: Test Cantera
         run: scons test
+
+  run-examples:
+    name: Run the Python examples using bash
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+        name: Checkout the repository
+        with:
+          submodules: recursive
+      - name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: '3.8'
+          architecture: x64
+      - name: Install Apt dependencies
+        run: sudo apt-get install libboost-dev gfortran graphviz liblapack-dev libblas-dev
+      - name: Upgrade pip
+        run: python3 -m pip install -U pip setuptools wheel
+      - name: Install Python dependencies
+        run: python3 -m pip install ruamel.yaml scons numpy cython h5py pandas matplotlib scipy
+      - name: Build Cantera
+        run: python3 `which scons` build -j2
+      - name: Run the examples
+        # See https://unix.stackexchange.com/a/392973 for an explanation of the -exec part
+        run: |
+          find interfaces/cython/cantera/examples -type f -iname "*.py" \
+          -exec sh -c 'for n; do echo "$n" | tee -a results.txt && python3 "$n" >> results.txt || exit 1; done' sh {} +
+        env:
+          PYTHONPATH: build/python
+          PYTHONWARNINGS: error
+          MPLBACKEND: Agg
+      - name: Save the results file for inspection
+        uses: actions/upload-artifact@v2
+        with:
+          path: results.txt
+        # Run this step if the job was successful or failed, but not if it was cancelled
+        # Using always() would run this step if the job was cancelled as well.
+        if: failure() || success()
 
   multiple-sundials:
     name: Sundials ${{ matrix.sundials-ver }}
@@ -270,7 +305,7 @@ jobs:
           architecture: 'x64'
       - name: Install Python dependencies
         run: |
-          python -m pip install -U pip setuptools
+          python -m pip install -U pip 'setuptools>=47.0.0,<48'
           python -m pip install scons pypiwin32 numpy ruamel.yaml cython h5py pandas
       - name: Build Cantera
         run: |

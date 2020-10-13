@@ -508,6 +508,9 @@ class ck2yamlTest(converterTestCommon, utilities.CanteraTest):
         for token in ('FAILED', 'lines 12 and 14', 'R1A', 'R1B'):
             self.assertIn(token, message)
 
+    def test_error_for_big_element_number(self):
+        with self.assertRaisesRegex(self.InputError, 'Element amounts can have no more than 3 digits.'):
+            self.convert('big_element_num_err.inp')
 
 class CtmlConverterTest(utilities.CanteraTest):
     def test_sofc(self):

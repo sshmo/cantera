@@ -432,6 +432,8 @@ cdef class ReactingSurface1D(Boundary1D):
         """Controls whether or not to solve the surface coverage equations."""
         def __set__(self, value):
             self.surf.enableCoverageEquations(<cbool>value)
+        def __get__(self):
+            return self.surf.coverageEnabled()
 
 
 cdef class _FlowBase(Domain1D):
@@ -578,10 +580,10 @@ cdef class _FlowBase(Domain1D):
         def __get__(self):
             return self.flow.leftEmissivity(), self.flow.rightEmissivity()
         def __set__(self, tuple epsilon):
-            if len(epsilon) == 2:
-                self.flow.setBoundaryEmissivities(epsilon[0], epsilon[1])
-            else:
-                raise ValueError("Setter requires tuple of length 2.")
+            if len(epsilon) != 2:
+                raise ValueError('Setting the boundary emissivities requires a '
+                                 'tuple of length 2.')
+            self.flow.setBoundaryEmissivities(epsilon[0], epsilon[1])
 
     property radiation_enabled:
         """ Determines whether or not to include radiative heat transfer """
