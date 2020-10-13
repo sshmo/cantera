@@ -542,9 +542,6 @@ XML_Node& PorousFlow::save(XML_Node& o, const doublereal* const sol)
 void PorousFlow::solid(doublereal* x, vector<double> &hconv, vector<double>& scond, vector<double>& RK, vector<double>&Omega,double & srho,double & sCp, double rdt) 
 //Solid solver
 {
-
-   std::cout << "Computing Solid Temperature Field..." << endl;
-
    int length=m_points; //
    Twprev = Tw;
    

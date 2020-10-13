@@ -19,7 +19,7 @@ void Combust()
 {
 	//New Parameters to allow for correlations
 	//Define Material Properties
-	double pore1 = 0.7;//0.835;
+	double pore1 = 0.69;//0.835;
 	double pore2 = 0.7;//0.870;
 	double diam1 = 0.0015;//.00029;
 	double diam2 = 0.0015;//0.00152
@@ -30,7 +30,7 @@ void Combust()
 	double m_zmid =0.035;
 	double m_dzmid =0.002;
 	//Export Proerties to fill
-	ofstream fid("results.txt");
+	ofstream fid("Properties.txt");
 	fid << pore1 << endl;
 	fid << pore2 << endl;
 	fid << diam1 << endl;
