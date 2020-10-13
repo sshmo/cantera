@@ -67,29 +67,6 @@ void PorousFlow::setupGrid(size_t n, const doublereal* z)
     }
 	StFlow::setupGrid(n,z);
 
-    ifstream in("Properties2.txt"); //Read in the solid properties
-    double proper;
-    in>>proper;
-    pore1=proper;
-    in>>proper;
-    pore2=proper;
-    in>>proper;
-    diam1=proper;
-    in>>proper;
-    diam2=proper;
-    in>>proper;
-    Omega1=proper;
-    in>>proper;
-    Omega2=proper;
-    in>>proper;
-    srho=proper;
-    in>>proper;
-    sCp=proper;
-    in>>proper;
-    m_zmid=proper;
-    in>>proper;
-    m_dzmid=proper;
-    in.close();
 }
 
 void PorousFlow::eval(size_t jg, doublereal* xg, doublereal* rg, integer* diagg, doublereal rdt)
@@ -541,9 +518,6 @@ XML_Node& PorousFlow::save(XML_Node& o, const doublereal* const sol)
 void PorousFlow::solid(doublereal* x, vector<double> &hconv, vector<double>& scond, vector<double>& RK, vector<double>&Omega,double & srho,double & sCp, double rdt) 
 //Solid solver
 {
-
-   std::cout << "Computing Solid Temperature Field..." << endl;
-
    int length=m_points; //
    Twprev = Tw;
    

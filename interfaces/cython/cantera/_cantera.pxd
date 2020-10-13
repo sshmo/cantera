@@ -787,11 +787,6 @@ cdef extern from "cantera/oneD/StFlow.h":
 cdef extern from "cantera/oneD/PorousFlow.h":
     cdef cppclass CxxPorousFlow "Cantera::PorousFlow":
         CxxPorousFlow(CxxIdealGasPhase*, int, int)
-        void setupGrid(size_t, double*)
-        void eval(size_t, double*, double*, int*, double) except +translate_exception
-        void solid(double*, vector[double]&, vector[double]&,
-               vector[double]&, vector[double]&, double&, double&, double) except +translate_exception
-        void restore(XML_Node&, double*,int) except +translate_exception
         double pore1
         double pore2
         double m_porea
