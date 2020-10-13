@@ -39,7 +39,8 @@ df[products_molar] = df[products_molar].div(df[products_molar].sum(axis=1), axis
 
 main_products = ["H2_molar", "CO_molar","CH4_molar", "O2_molar","CO2_molar","H2O_molar"]
             
-df[main_products]
+main_products_df = df[main_products]
+main_products_df.to_csv('results.csv')
 
 
 

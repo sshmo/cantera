@@ -15,6 +15,9 @@ ctpore_cxx/w1.depend
 ctpore_cxx/w1.layout
 ctpore_cxx/solid_results.txt
 
+samples/
+interfaces/cython/cantera/examples/
+samples/cxx/
 doc/ctdeploy_key
 *~
 *#
@@ -76,3 +79,12 @@ doc/sphinx/matlab/transport.rst
 doc/sphinx/matlab/utilities.rst
 doc/sphinx/matlab/zero-dim.rst
 ctpore_cxx/main (copy)
+ctpore_cxx/main copy.cpp
+ctpore_cxx/main (copy).cpp
+ctpore_cxx/main (copy)
+ctpore_cxx/gradienttest.xml
+ctpore_cxx/bin/Debug/w1
+ctpore_cxx/w1.layout
+ctpore_cxx/w1.depend
+ctpore_cxx/w1.cbp
+ctpore_cxx/solid_results.txt

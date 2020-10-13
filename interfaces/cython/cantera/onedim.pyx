@@ -704,6 +704,212 @@ cdef class IonFlow(_FlowBase):
         self.have_user_tolerances = False
 
 
+cdef class PorousFlow(_FlowBase):
+    """
+    An axisymmetric porous flow domain.
+
+    """
+    def __cinit__(self, _SolutionBase thermo, *args, **kwargs):
+        gas = getIdealGasPhase(thermo)
+        # self.flow = new CxxPorousFlow(gas, thermo.n_species, 2)
+        self.flow = <CxxStFlow*>(new CxxPorousFlow(gas, thermo.n_species, 2))
+            
+    property pore1:
+        """ Porosity 1. """
+        def __get__(self):
+            return (<CxxPorousFlow*> self.flow).pore1
+        def __set__(self, pore):
+            (<CxxPorousFlow*> self.flow).pore1 = pore
+    
+    property pore2:
+        """ Porosity 2. """
+        def __get__(self):
+            return (<CxxPorousFlow*> self.flow).pore2
+        def __set__(self, pore):
+            (<CxxPorousFlow*> self.flow).pore2 = pore
+        
+    property diam1:
+        """ Diameter 1. """
+        def __get__(self):
+            return (<CxxPorousFlow*> self.flow).diam1
+        def __set__(self, diam):
+            (<CxxPorousFlow*> self.flow).diam1 = diam
+        
+    property diam2:
+        """ Diameter 2. """
+        def __get__(self):
+            return (<CxxPorousFlow*> self.flow).diam2
+        def __set__(self, diam):
+            (<CxxPorousFlow*> self.flow).diam2 = diam
+ 
+    property scond1:
+        """ Solid Thermal Conductivity 1. """
+        def __get__(self):
+            return (<CxxPorousFlow*> self.flow).scond1
+        def __set__(self, scond):
+            (<CxxPorousFlow*> self.flow).scond1 = scond
+        
+    property scond2:
+        """ Solid Thermal Conductivity 2. """
+        def __get__(self):
+            return (<CxxPorousFlow*> self.flow).scond2
+        def __set__(self, scond):
+            (<CxxPorousFlow*> self.flow).scond2 = scond
+        
+    property Omega1:
+        """ Omega 1. """
+        def __get__(self):
+            return (<CxxPorousFlow*> self.flow).Omega1
+        def __set__(self, Omega):
+            (<CxxPorousFlow*> self.flow).Omega1 = Omega      
+    property Omega2:
+        """ Omega 2. """
+        def __get__(self):
+            return (<CxxPorousFlow*> self.flow).Omega2
+        def __set__(self, Omega):
+            (<CxxPorousFlow*> self.flow).Omega2 = Omega
+            
+    property srho:
+        """ solid density """
+        def __get__(self):
+            return (<CxxPorousFlow*> self.flow).srho
+        def __set__(self, rho):
+            (<CxxPorousFlow*> self.flow).srho = rho
+            
+    property sCp:
+        """ solid Cp. """
+        def __get__(self):
+            return (<CxxPorousFlow*> self.flow).sCp
+        def __set__(self, Cp):
+            (<CxxPorousFlow*> self.flow).sCp = Cp
+            
+    property zmid:
+        """ interface location """
+        def __get__(self):
+            return (<CxxPorousFlow*> self.flow).m_zmid
+        def __set__(self, z):
+            (<CxxPorousFlow*> self.flow).m_zmid = z
+    property dzmid:
+        """ interface slope """
+        def __get__(self):
+            return (<CxxPorousFlow*> self.flow).m_dzmid
+        def __set__(self, dz):
+            (<CxxPorousFlow*> self.flow).m_dzmid = dz
+    property porea:
+        """ parameter in porosity profile of burner """
+        def __get__(self):
+            return (<CxxPorousFlow*> self.flow).m_porea
+        def __set__(self, pore_a):
+            (<CxxPorousFlow*> self.flow).m_porea = pore_a 
+    property poreb:
+        """ parameter in porosity profile of burner """
+        def __get__(self):
+            return (<CxxPorousFlow*> self.flow).m_poreb
+        def __set__(self, pore_b):
+            (<CxxPorousFlow*> self.flow).m_poreb = pore_b 
+    property porec:
+        """ parameter in porosity profile of burner """
+        def __get__(self):
+            return (<CxxPorousFlow*> self.flow).m_porec
+        def __set__(self, pore_c):
+            (<CxxPorousFlow*> self.flow).m_porec = pore_c
+    property pored:
+        """ parameter in porosity profile of burner """
+        def __get__(self):
+            return (<CxxPorousFlow*> self.flow).m_pored
+        def __set__(self, pore_d):
+            (<CxxPorousFlow*> self.flow).m_pored = pore_d
+    property diama:
+        """ parameter in pore diameter profile of burner """
+        def __get__(self):
+            return (<CxxPorousFlow*> self.flow).m_diama
+        def __set__(self, diam_a):
+            (<CxxPorousFlow*> self.flow).m_diama = diam_a 
+    property diamb:
+        """ parameter in pore diameter profile of burner """
+        def __get__(self):
+            return (<CxxPorousFlow*> self.flow).m_diamb
+        def __set__(self, diam_b):
+            (<CxxPorousFlow*> self.flow).m_diamb = diam_b 
+    property diamc:
+        """ parameter in pore diameter profile of burner """
+        def __get__(self):
+            return (<CxxPorousFlow*> self.flow).m_diamc
+        def __set__(self, diam_c):
+            (<CxxPorousFlow*> self.flow).m_diamc = diam_c
+    property diamd:
+        """ parameter in pore diameter profile of burner """
+        def __get__(self):
+            return (<CxxPorousFlow*> self.flow).m_diamd
+        def __set__(self, diam_d):
+            (<CxxPorousFlow*> self.flow).m_diamd = diam_d
+    property Tw:
+        """
+        Solid Temperature
+        """
+        def __get__(self):
+            cdef np.ndarray[np.double_t, ndim=1] data = np.empty(self.n_points)
+            tmpPtr = <CxxPorousFlow*> self.flow
+            for j in range(self.n_points):
+                data[j] = tmpPtr.getTw(j)
+            return data	
+    
+    property Dq:
+        """
+        Radiation
+        """
+        def __get__(self):
+            cdef np.ndarray[np.double_t, ndim=1] data = np.empty(self.n_points)
+            tmpPtr = <CxxPorousFlow*> self.flow
+            for j in range(self.n_points):
+                data[j] = tmpPtr.getDq(j)
+            return data
+            
+    property porosity:
+        """
+        The porosiity of PMB
+        """
+        def __get__(self):
+            cdef np.ndarray[np.double_t, ndim=1] data = np.empty(self.n_points)
+            tmpPtr = <CxxPorousFlow*> self.flow
+            for j in range(self.n_points):
+                data[j] = tmpPtr.getPore(j)
+            return data
+        
+    property pore_diameter:
+        """
+        The diameter of pores in porous media burner
+        """
+        def __get__(self):
+            cdef np.ndarray[np.double_t, ndim=1] data = np.empty(self.n_points)
+            tmpPtr = <CxxPorousFlow*> self.flow
+            for j in range(self.n_points):
+                data[j] = tmpPtr.getDiam(j)
+            return data
+    
+    property solid_conduct:
+        """
+        The thermal conductivity of the solid in porous media burner
+        """
+        def __get__(self):
+            cdef np.ndarray[np.double_t, ndim=1] data = np.empty(self.n_points)
+            tmpPtr = <CxxPorousFlow*> self.flow
+            for j in range(self.n_points):
+                data[j] = tmpPtr.getScond(j)
+            return data
+    
+    property hconv:
+        """
+        Hconv coefficient, dictates heat transfer between solid and gas in porous media burner
+        """
+        def __get__(self):
+            cdef np.ndarray[np.double_t, ndim=1] data = np.empty(self.n_points)
+            tmpPtr = <CxxPorousFlow*> self.flow
+            for j in range(self.n_points):
+                data[j] = tmpPtr.getHconv(j)
+            return data
+
+            
 cdef class Sim1D:
     """
     Class Sim1D is a container for one-dimensional domains. It also holds the
