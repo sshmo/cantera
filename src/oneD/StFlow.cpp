@@ -8,7 +8,7 @@
 #include "cantera/base/ctml.h"
 #include "cantera/transport/TransportBase.h"
 #include "cantera/numerics/funcs.h"
-#include "cantera/oneD/OneDim.h"
+
 using namespace std;
 
 namespace Cantera
