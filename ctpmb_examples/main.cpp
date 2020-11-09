@@ -29,20 +29,6 @@ void Combust()
 	double sCp = 824;
 	double m_zmid =0.035;
 	double m_dzmid =0.002;
-	//Export Proerties to fill
-	ofstream fid("Properties.txt");
-	fid << pore1 << endl;
-	fid << pore2 << endl;
-	fid << diam1 << endl;
-	fid << diam2 << endl;
-	fid << Omega1 << endl;
-	fid << Omega2 << endl;
-	fid << srho << endl;
-	fid << sCp << endl;
-    fid << m_zmid << endl;
-	fid << m_dzmid << endl;
-	fid.close();
-
 
     //auto sol = newSolution("drm19.yaml", "drm19", "None");
 	auto sol = newSolution("gri30.yaml", "gri30", "None");
@@ -83,6 +69,18 @@ void Combust()
 	//Create the flow object
     PorousFlow flow(gas);
     flow.setAxisymmetricFlow();
+
+	//Solid Proerties
+	flow.pore1 =  pore1;
+	flow.pore2 =  pore2;
+	flow.diam1 =  diam1;
+	flow.diam2 =  diam2;
+	flow.Omega1 =  Omega1;
+	flow.Omega2 =  Omega2;
+	flow.srho =  srho;
+	flow.sCp =  sCp;
+	flow.m_zmid =  m_zmid;
+	flow.m_dzmid =  m_dzmid;
 
 	// create an initial grid
 //	int nn = 1;
