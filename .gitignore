@@ -90,3 +90,8 @@ ctpore_cxx/w1.cbp
 ctpore_cxx/solid_results.txt
 ctpmb_examples/gradienttest.xml
 ctpmb_examples/bin/Debug/w1
+ctpmb_examples/main
+ctpmb_examples/Molar_compositions.png
+ctpmb_examples/porous_flame.csv
+ctpmb_examples/porous_flame.xml
+ctpmb_examples/Tempretures.png

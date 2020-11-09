@@ -7,6 +7,7 @@ Requires: cantera >= 2.5.0
 
 import cantera as ct
 import numpy as np
+import matplotlib.pyplot as plt
 
 class PorousFlame(ct.FlameBase):
     """A freely-propagating flat flame."""
@@ -194,12 +195,40 @@ f.show_solution()
 # Solve with mixture-averaged transport model
 f.energy_enabled = True
 f.transport_model = 'Mix'
-f.solve(loglevel=loglevel, auto=False)
+f.solve(loglevel=loglevel, auto=False, refine_grid=True)
 
 
 # Solve with the energy equation enabled
 f.save('porous_flame.xml', 'Mix',
            'solution with mixture transport')
 
+
+
+df = f.to_pandas()
+x = f.grid
+df.insert(0,'x (m)', x, True)
+
+plt.plot(x, df['T'], label='T_gas')
+plt.plot(x, f.flame.Tw, label='T_solid')
+plt.xlabel('x (m)')
+plt.ylabel('T (K)')
+plt.legend()
+fig1 = plt.gcf()
+plt.show()
+fig1.savefig('Tempretures.png')
+
+plt.plot(x, df['X_H2'], label='H2')
+plt.plot(x, df['X_CO'], label='CO')
+plt.plot(x, df['X_O2'], label='O2')
+plt.plot(x, df['X_CH4'], label='CH4')
+plt.plot(x, df['X_CO2'], label='CO2')
+plt.plot(x, df['X_H2O'], label='H2O')
+plt.xlabel('x (m)')
+plt.ylabel('Molar composition (%)')
+plt.legend()
+fig2 = plt.gcf()
+plt.show()
+fig2.savefig('Molar_compositions.png')
+
 # write the velocity, temperature, density, and mole fractions to a CSV file
-f.write_csv('porous_flame.csv', quiet=False)
+df.to_csv('porous_flame.csv')
